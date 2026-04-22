@@ -1,6 +1,6 @@
 # Built With Purpose — Academic & Technical Projects
 
-Live site: [builtwithpurpose.com](https://builtwithpurpose.com)
+Live site: [builtwithpurpose.dev](https://builtwithpurpose.dev)
 Author: **Julius L. Moore** · WGU Software Engineering · Nurse → Engineer
 
 ---
@@ -23,9 +23,10 @@ The intent is simple: show, don't tell. Every stat on the page points to somethi
 
 ```
 .
-├── index.html     # Portfolio landing page (hero, about, network, labs, projects)
-├── lab-001.html   # Apple TV connectivity failure after ISP bridge mode cutover
-└── lab-002.html   # Tailscale DNS hijack & TCP socket corruption
+├── index.html          # Portfolio landing page (hero, about, network, labs, projects)
+├── architecture.html   # Capstone system architecture — 78K-line AI content platform
+├── lab-001.html        # Apple TV connectivity failure after ISP bridge mode cutover
+└── lab-002.html        # Tailscale DNS hijack & TCP socket corruption
 ```
 
 No build step. No framework. Plain HTML/CSS with vanilla JS for the dark/light theme toggle. Deployed on Netlify.
