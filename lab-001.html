@@ -169,14 +169,14 @@
 </blockquote>
 <hr />
 <h2>Scenario Summary</h2>
-<p>After completing a household network migration (moving the GS316EP from the Xfinity gateway to the Cisco router, flipping the XB8 to bridge mode, and configuring Apple TVs with static IPs on VLAN 20), the Apple TV streaming boxes stopped connecting to apps and streaming services. Phones and laptops on the same VLAN worked fine. The troubleshooting process involved systematic elimination across multiple OSI layers.</p>
+<p>After completing a household network migration (moving the managed PoE+ switch off the ISP gateway and onto the Cisco branch router, flipping the ISP gateway to bridge mode, and configuring Apple TVs with static IPs on the TRUSTED VLAN), the Apple TV streaming boxes stopped connecting to apps and streaming services. Phones and laptops on the same VLAN worked fine. The troubleshooting process involved systematic elimination across multiple OSI layers.</p>
 <hr />
 <h2>Step-by-Step Troubleshooting</h2>
 <h3>Step 1: Verify Layer 3 Reachability</h3>
 <p><strong>What you did:</strong> Pinged the Apple TV static IPs (.101, .102, .103) from the Cisco router.</p>
-<div class="codehilite"><pre><span></span><code>ping 192.168.20.101  → 5/5 success
-ping 192.168.20.102  → 5/5 success
-ping 192.168.20.103  → 5/5 success
+<div class="codehilite"><pre><span></span><code>ping 10.0.20.101  → 5/5 success
+ping 10.0.20.102  → 5/5 success
+ping 10.0.20.103  → 5/5 success
 </code></pre></div>
 
 <p><strong>Result:</strong> Layer 3 connectivity confirmed. The Apple TVs were reachable on their VLAN.</p>
@@ -201,8 +201,8 @@ ping 192.168.20.103  → 5/5 success
 <hr />
 <h3>Step 4: Test MTU / Fragmentation</h3>
 <p><strong>What you did:</strong> Sent large ICMP packets with the DF (Don't Fragment) bit set to test for MTU issues.</p>
-<div class="codehilite"><pre><span></span><code>ping 192.168.20.102 size 1500 df-bit  → 5/5 success
-ping 192.168.20.102 size 1400 df-bit  → 5/5 success
+<div class="codehilite"><pre><span></span><code>ping 10.0.20.102 size 1500 df-bit  → 5/5 success
+ping 10.0.20.102 size 1400 df-bit  → 5/5 success
 </code></pre></div>
 
 <p><strong>Result:</strong> Large packets pass without fragmentation. MTU is not the issue on the LAN side.</p>
@@ -219,7 +219,7 @@ ping 192.168.20.102 size 1400 df-bit  → 5/5 success
 <hr />
 <h3>Step 6: Investigate DNS Filtering (Pi-hole)</h3>
 <p><strong>What you did:</strong> Checked if DNS resolution was working by testing from the Acer.</p>
-<div class="codehilite"><pre><span></span><code>nslookup apple.com 192.168.10.16  → Resolved to 17.253.144.10
+<div class="codehilite"><pre><span></span><code>nslookup apple.com 10.0.10.16  → Resolved to 17.253.144.10
 </code></pre></div>
 
 <p>Then checked the Pi-hole query log and found Apple service domains being blocked.</p>
@@ -281,7 +281,7 @@ ping 192.168.20.102 size 1400 df-bit  → 5/5 success
 </tr>
 <tr>
 <td>3.3 Default Gateway</td>
-<td>Verified Apple TV gateway was 192.168.20.1 (Cisco SVI), not old 10.0.0.1 (XB8)</td>
+<td>Verified Apple TV gateway was the Cisco SVI on the TRUSTED VLAN, not the old ISP-gateway default</td>
 </tr>
 <tr>
 <td>3.4 NAT</td>

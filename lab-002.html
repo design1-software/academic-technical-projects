@@ -178,11 +178,11 @@ Root Cause: Tailscale MagicDNS + stale tunnel interface corrupting TCP socket st
 <ul>
 <li>Websites returned <code>ERR_ADDRESS_INVALID</code> in the browser</li>
 <li><code>curl -I https://github.com</code> → <code>Failed to connect to github.com port 443: Couldn't connect to server</code></li>
-<li><code>ssh admin@192.168.10.1</code> → <code>Can't assign requested address</code></li>
+<li><code>ssh admin@10.0.10.1</code> → <code>Can't assign requested address</code></li>
 <li><code>nc -zv 140.82.112.3 443</code> → <code>Can't assign requested address</code></li>
 <li><code>ping 8.8.8.8</code> → 100% success, ~20ms</li>
-<li><code>ping 192.168.20.1</code> (gateway) → 100% success</li>
-<li><code>ping 192.168.10.16</code> (Pi-hole, cross-VLAN) → 100% success</li>
+<li><code>ping 10.0.20.1</code> (gateway) → 100% success</li>
+<li><code>ping 10.0.10.16</code> (Pi-hole, cross-VLAN) → 100% success</li>
 </ul>
 <p><strong>Key observation:</strong> ICMP worked perfectly. All TCP connections failed with "Can't assign requested address" — a local socket error, not a network timeout.</p>
 <hr />
@@ -193,12 +193,12 @@ Root Cause: Tailscale MagicDNS + stale tunnel interface corrupting TCP socket st
 <hr />
 <h3>Step 2: Verify Layer 3 Path</h3>
 <p><strong>What you did:</strong></p>
-<div class="codehilite"><pre><span></span><code>ping -c 3 192.168.20.1   → success (gateway)
-ping -c 3 192.168.10.16  → success (cross-VLAN to Pi-hole)
+<div class="codehilite"><pre><span></span><code>ping -c 3 10.0.20.1   → success (gateway)
+ping -c 3 10.0.10.16  → success (cross-VLAN to Pi-hole)
 ping -c 3 8.8.8.8        → success (internet)
 </code></pre></div>
 
-<p><strong>Result:</strong> Full Layer 3 reachability confirmed across VLANs and to the internet. Routing table showed correct default gateway (192.168.20.1). IP address was correct (192.168.20.25 on VLAN 20).</p>
+<p><strong>Result:</strong> Full Layer 3 reachability confirmed across VLANs and to the internet. Routing table showed correct default gateway (10.0.20.1). IP address was correct (10.0.20.25 on VLAN 20).</p>
 <p><strong>CCNA Skill:</strong> Systematic Layer 3 verification — local gateway, cross-VLAN, internet. Maps to: <em>IP connectivity, inter-VLAN routing verification</em>.</p>
 <hr />
 <h3>Step 3: Test TCP Independently</h3>
@@ -223,7 +223,7 @@ ping -c 3 8.8.8.8        → success (internet)
   order : 101200                        ← Higher priority than Pi-hole
 
 resolver #2
-  nameserver[0] : 192.168.10.16        ← Pi-hole (should be primary)
+  nameserver[0] : 10.0.10.16        ← Pi-hole (should be primary)
   order : 200000                        ← Lower priority
 </code></pre></div>
 
@@ -256,7 +256,7 @@ sudo killall -HUP mDNSResponder
 <p><strong>CCNA Skill:</strong> Knowing when to escalate from software troubleshooting to a clean restart. In enterprise environments, this is equivalent to restarting a service or clearing a device's control plane. Maps to: <em>Troubleshooting methodology, knowing when to reset vs. when to debug further</em>.</p>
 <hr />
 <h2>Root Cause Analysis</h2>
-<p><strong>Primary cause:</strong> Tailscale's MagicDNS feature hijacked DNS resolution on the MacBook by inserting itself as the highest-priority DNS resolver (100.100.100.100 on utun8 tunnel interface, order 101200) above the DHCP-provided Pi-hole DNS (192.168.10.16, order 200000).</p>
+<p><strong>Primary cause:</strong> Tailscale's MagicDNS feature hijacked DNS resolution on the MacBook by inserting itself as the highest-priority DNS resolver (100.100.100.100 on utun8 tunnel interface, order 101200) above the DHCP-provided Pi-hole DNS (10.0.10.16, order 200000).</p>
 <p><strong>Secondary cause:</strong> When Tailscale was disabled and quit, its virtual tunnel interface (utun8) was removed but TCP socket bindings associated with that interface were not properly released. The MacBook's TCP stack entered a corrupted state where no new TCP connections could be created (EADDRNOTAVAIL error on all TCP socket creation attempts), while ICMP (which doesn't use TCP sockets) continued to work normally.</p>
 <p><strong>Resolution:</strong> Full system reboot cleared all stale network state. Tailscale's MagicDNS was disabled before reconnecting to prevent recurrence.</p>
 <hr />
@@ -271,7 +271,7 @@ sudo killall -HUP mDNSResponder
 <tbody>
 <tr>
 <td>MacBook Pro (WiFi, VLAN 20)</td>
-<td>Acer Server (wired, VLAN 10)</td>
+<td>Home server (wired, SERVER VLAN)</td>
 </tr>
 <tr>
 <td>All TCP: HTTPS, SSH, curl, nc</td>
