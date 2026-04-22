@@ -1,6 +1,6 @@
 # Built With Purpose — Academic & Technical Projects
 
-Live site: [builtwithpurpose.netlify.app](https://builtwithpurpose.netlify.app)
+Live site: [builtwithpurpose.com](https://builtwithpurpose.com)
 Author: **Julius L. Moore** · WGU Software Engineering · Nurse → Engineer
 
 ---
