@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 001 — Apple TV Connectivity Failure After Bridge Mode Cutover | Built With Purpose</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    [data-theme="dark"] {
+      --bg-primary: #08080a; --bg-card: #141418; --bg-nav: rgba(8,8,10,0.88);
+      --border: #222228; --border-hover: #3a3a44;
+      --text-primary: #ededef; --text-secondary: #9d9ba8; --text-muted: #5e5c6a;
+      --accent-blue: #6190f0; --accent-green: #4ade80; --accent-cyan: #22d3ee;
+      --toggle-bg: #1e1e24;
+    }
+    [data-theme="light"] {
+      --bg-primary: #f7f7f8; --bg-card: #ffffff; --bg-nav: rgba(247,247,248,0.88);
+      --border: #d8d8de; --border-hover: #b0b0ba;
+      --text-primary: #111118; --text-secondary: #4a4858; --text-muted: #84829a;
+      --accent-blue: #3464d4; --accent-green: #16a34a; --accent-cyan: #0891b2;
+      --toggle-bg: #e4e4ea;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg-primary); color: var(--text-primary);
+      font-family: 'Outfit', sans-serif; line-height: 1.8;
+      -webkit-font-smoothing: antialiased; transition: background 0.35s, color 0.35s;
+    }
+    a { color: var(--accent-blue); text-decoration: none; }
+    a:hover { color: var(--accent-cyan); }
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: var(--bg-nav); backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border); padding: 0 2rem;
+      transition: background 0.35s, border-color 0.35s;
+    }
+    .nav-inner {
+      max-width: 900px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center; height: 60px;
+    }
+    .logo { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--text-secondary); }
+    .logo span { color: var(--accent-blue); }
+    .nav-right { display: flex; align-items: center; gap: 1.5rem; }
+    .back { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--text-muted); }
+    .back:hover { color: var(--text-primary); }
+    .theme-toggle {
+      width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--toggle-bg); cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 0.95rem; transition: all 0.3s; color: var(--text-secondary);
+    }
+    .theme-toggle:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .content { max-width: 900px; margin: 0 auto; padding: 6.5rem 2rem 4rem; }
+    .lab-header {
+      margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border);
+      transition: border-color 0.35s;
+    }
+    .lab-num {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: var(--accent-green); letter-spacing: 0.15em; text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .lab-header h1 { font-size: 1.8rem; font-weight: 700; line-height: 1.25; margin-bottom: 0.75rem; }
+    .lab-header .meta { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-muted); }
+    .lab-body h1 { font-size: 1.4rem; font-weight: 600; margin: 2.5rem 0 0.75rem; }
+    .lab-body h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.6rem; }
+    .lab-body h3 { font-size: 1.05rem; font-weight: 500; margin: 1.5rem 0 0.5rem; }
+    .lab-body p { color: var(--text-secondary); margin-bottom: 1rem; font-weight: 300; }
+    .lab-body strong { color: var(--text-primary); font-weight: 500; }
+    .lab-body em { color: var(--accent-cyan); font-style: normal; }
+    .lab-body ul, .lab-body ol { color: var(--text-secondary); margin: 0.5rem 0 1rem 1.5rem; font-weight: 300; }
+    .lab-body li { margin-bottom: 0.35rem; }
+    .lab-body code {
+      font-family: 'DM Mono', monospace; font-size: 0.83em;
+      background: var(--bg-card); padding: 0.12rem 0.35rem; border-radius: 3px;
+      color: var(--accent-cyan); transition: background 0.35s;
+    }
+    .lab-body pre {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1.15rem; margin: 1rem 0; overflow-x: auto; transition: background 0.35s, border-color 0.35s;
+    }
+    .lab-body pre code { background: none; padding: 0; font-size: 0.78rem; line-height: 1.6; }
+    .lab-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.83rem; }
+    .lab-body th {
+      text-align: left; padding: 0.65rem; border-bottom: 2px solid var(--border);
+      color: var(--text-primary); font-weight: 500; font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+      transition: border-color 0.35s;
+    }
+    .lab-body td {
+      padding: 0.55rem 0.65rem; border-bottom: 1px solid var(--border);
+      color: var(--text-secondary); font-weight: 300; transition: border-color 0.35s;
+    }
+    .lab-body hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; transition: border-color 0.35s; }
+    .lab-body blockquote {
+      border-left: 3px solid var(--accent-blue); padding-left: 1.15rem;
+      margin: 1rem 0; color: var(--text-secondary); font-style: italic;
+    }
+    footer {
+      border-top: 1px solid var(--border); padding: 2rem; text-align: center;
+      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted);
+      transition: border-color 0.35s;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="/" class="logo"><span>~/</span>builtwithpurpose</a>
+      <div class="nav-right">
+        <a href="/#labs" class="back">&larr; Back to Labs</a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" id="themeBtn">&#x25D1;</button>
+      </div>
+    </div>
+  </nav>
+  <div class="content">
+    <div class="lab-header">
+      <div class="lab-num">Lab 001</div>
+      <h1>Apple TV Connectivity Failure After Bridge Mode Cutover</h1>
+      <div class="meta">Julius L Moore &middot; April 2026 &middot; Home Lab</div>
+    </div>
+    <div class="lab-body">
+      <h1>Troubleshooting Lab Report — April 19-21, 2026</h1>
+<blockquote>
+<p>What happened, what you did, and which CCNA exam topics each step maps to.</p>
+</blockquote>
+<hr />
+<h2>Scenario Summary</h2>
+<p>After completing a household network migration (moving the GS316EP from the Xfinity gateway to the Cisco router, flipping the XB8 to bridge mode, and configuring Apple TVs with static IPs on VLAN 20), the Apple TV streaming boxes stopped connecting to apps and streaming services. Phones and laptops on the same VLAN worked fine. The troubleshooting process involved systematic elimination across multiple OSI layers.</p>
+<hr />
+<h2>Step-by-Step Troubleshooting</h2>
+<h3>Step 1: Verify Layer 3 Reachability</h3>
+<p><strong>What you did:</strong> Pinged the Apple TV static IPs (.101, .102, .103) from the Cisco router.</p>
+<div class="codehilite"><pre><span></span><code>ping 192.168.20.101  → 5/5 success
+ping 192.168.20.102  → 5/5 success
+ping 192.168.20.103  → 5/5 success
+</code></pre></div>
+
+<p><strong>Result:</strong> Layer 3 connectivity confirmed. The Apple TVs were reachable on their VLAN.</p>
+<p><strong>CCNA Skill:</strong> ICMP troubleshooting, Layer 3 verification, <code>ping</code> command usage. This maps to CCNA exam topic: <em>IP connectivity troubleshooting</em>.</p>
+<hr />
+<h3>Step 2: Verify Internet Path</h3>
+<p><strong>What you did:</strong> Confirmed the Cisco could reach the internet after bridge mode cutover.</p>
+<div class="codehilite"><pre><span></span><code>ping 8.8.8.8  → 5/5 success, 16-19ms
+</code></pre></div>
+
+<p><strong>Result:</strong> WAN path is working. NAT is translating and the new public IP (174.53.28.46) is functional.</p>
+<p><strong>CCNA Skill:</strong> WAN verification, NAT validation. Maps to: <em>NAT/PAT operations and verification</em>.</p>
+<hr />
+<h3>Step 3: Verify NAT Translations</h3>
+<p><strong>What you did:</strong> Checked NAT statistics and looked for active translations from the Apple TV IP.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">show</span><span class="w"> </span><span class="nv">ip</span><span class="w"> </span><span class="nv">nat</span><span class="w"> </span><span class="nv">statistics</span><span class="w">    </span>→<span class="w"> </span><span class="mi">228</span><span class="w"> </span><span class="nv">active</span><span class="w"> </span><span class="nv">translations</span>,<span class="w"> </span><span class="nv">millions</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">hits</span>
+<span class="k">show</span><span class="w"> </span><span class="nv">ip</span><span class="w"> </span><span class="nv">nat</span><span class="w"> </span><span class="nv">translations</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">include</span><span class="w"> </span><span class="mi">192</span>.<span class="mi">168</span>.<span class="mi">20</span>.<span class="mi">102</span><span class="w">  </span>→<span class="w"> </span><span class="nv">Found</span><span class="w"> </span><span class="nv">translation</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="mi">17</span>.<span class="mi">253</span>.<span class="mi">150</span>.<span class="mi">10</span>:<span class="mi">443</span><span class="w"> </span><span class="ss">(</span><span class="nv">Apple</span><span class="w"> </span><span class="nv">server</span><span class="ss">)</span>
+</code></pre></div>
+
+<p><strong>Result:</strong> NAT is working. The Apple TV's traffic IS being translated and sent to the internet. The problem is not NAT.</p>
+<p><strong>CCNA Skill:</strong> NAT troubleshooting using <code>show ip nat statistics</code> and <code>show ip nat translations</code>. Maps to: <em>Verify and troubleshoot NAT operations</em>.</p>
+<hr />
+<h3>Step 4: Test MTU / Fragmentation</h3>
+<p><strong>What you did:</strong> Sent large ICMP packets with the DF (Don't Fragment) bit set to test for MTU issues.</p>
+<div class="codehilite"><pre><span></span><code>ping 192.168.20.102 size 1500 df-bit  → 5/5 success
+ping 192.168.20.102 size 1400 df-bit  → 5/5 success
+</code></pre></div>
+
+<p><strong>Result:</strong> Large packets pass without fragmentation. MTU is not the issue on the LAN side.</p>
+<p><strong>CCNA Skill:</strong> MTU troubleshooting, understanding of IP fragmentation and the DF bit. Maps to: <em>IP connectivity troubleshooting, packet delivery</em>.</p>
+<hr />
+<h3>Step 5: Apply TCP MSS Clamping</h3>
+<p><strong>What you did:</strong> After ruling out LAN-side MTU issues, you applied TCP MSS clamping on the WAN interface to handle potential upstream MTU problems introduced by bridge mode.</p>
+<div class="codehilite"><pre><span></span><code>interface GigabitEthernet0/0/0
+ ip tcp adjust-mss 1452
+</code></pre></div>
+
+<p><strong>Why:</strong> Bridge mode changes the WAN path. The ISP's encapsulation (PPPoE or DOCSIS overhead) can cause large TCP segments to be silently dropped. MSS clamping tells both sides of the TCP connection to use smaller segments that fit within the path MTU.</p>
+<p><strong>CCNA Skill:</strong> TCP MSS adjustment, understanding of TCP three-way handshake and MSS negotiation. Maps to: <em>TCP/IP transport layer operations</em>.</p>
+<hr />
+<h3>Step 6: Investigate DNS Filtering (Pi-hole)</h3>
+<p><strong>What you did:</strong> Checked if DNS resolution was working by testing from the Acer.</p>
+<div class="codehilite"><pre><span></span><code>nslookup apple.com 192.168.10.16  → Resolved to 17.253.144.10
+</code></pre></div>
+
+<p>Then checked the Pi-hole query log and found Apple service domains being blocked.</p>
+<p><strong>Result:</strong> Pi-hole was blocking domains required by Apple TV services (gsa.apple.com, configuration.apple.com, apps.apple.com, etc.).</p>
+<p><strong>CCNA Skill:</strong> DNS troubleshooting using <code>nslookup</code>, understanding of DNS filtering and its impact on application connectivity. Maps to: <em>DNS resolution verification, application layer troubleshooting</em>.</p>
+<hr />
+<h3>Step 7: Whitelist Apple Domains</h3>
+<p><strong>What you did:</strong> Used Pi-hole v6 CLI to whitelist essential Apple domains.</p>
+<div class="codehilite"><pre><span></span><code>pihole allow gsa.apple.com gsp-ssl.ls.apple.com mesu.apple.com configuration.apple.com apps.apple.com api-glb-sjc.smoot.apple.com gs-loc.apple.com play.itunes.apple.com bag.itunes.apple.com init.itunes.apple.com
+</code></pre></div>
+
+<p><strong>Result:</strong> Pi-hole stopped blocking Apple service domains.</p>
+<p><strong>CCNA Skill:</strong> Understanding of DNS-based security filtering and its interaction with network services. Maps to: <em>Network security concepts, DNS operations</em>.</p>
+<hr />
+<h3>Step 8: Identify Static IP as Root Cause</h3>
+<p><strong>What you did:</strong> After whitelisting Apple domains, the Apple TVs still wouldn't connect. You compared behavior: phones and laptops on the same VLAN 20 worked fine, only the Apple TVs (with manually configured static IPs) failed.</p>
+<p>You then changed the Apple TVs from static IP configuration to DHCP (automatic).</p>
+<p><strong>Result:</strong> All three Apple TVs immediately connected and apps loaded successfully.</p>
+<p><strong>Root cause:</strong> Apple TV devices require DHCP-provided network parameters beyond IP/gateway/DNS. Static IP configuration, while technically correct at Layer 3, caused application-level connectivity failures — likely due to missing DHCP options (search domains, lease parameters, or IPv6 configuration) that the Apple TV OS depends on.</p>
+<p><strong>CCNA Skill:</strong> Understanding the difference between static IP assignment and DHCP-assigned addressing, DHCP options, troubleshooting DHCP client behavior. Maps to: <em>DHCP operations, first-hop redundancy, IP connectivity</em>.</p>
+<hr />
+<h3>Step 9: Verify the Fix</h3>
+<p><strong>What you did:</strong> Confirmed all three Apple TVs received DHCP leases and appeared in the binding table.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">show</span><span class="w"> </span><span class="nv">ip</span><span class="w"> </span><span class="nv">dhcp</span><span class="w"> </span><span class="nv">binding</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">include</span><span class="w"> </span><span class="mi">192</span>.<span class="mi">168</span>.<span class="mi">20</span>
+→<span class="w"> </span>.<span class="mi">35</span><span class="w"> </span><span class="ss">(</span><span class="nv">Living</span><span class="o">-</span><span class="nv">Room</span><span class="ss">)</span>,<span class="w"> </span>.<span class="mi">36</span><span class="w"> </span><span class="ss">(</span><span class="nv">Front</span><span class="o">-</span><span class="nv">Bedroom</span><span class="ss">)</span>,<span class="w"> </span>.<span class="mi">37</span><span class="w"> </span><span class="ss">(</span><span class="nv">Master</span><span class="o">-</span><span class="nv">Bedroom</span><span class="ss">)</span>
+</code></pre></div>
+
+<p>Confirmed apps loaded and streaming worked on all three boxes.</p>
+<p><strong>CCNA Skill:</strong> DHCP verification using <code>show ip dhcp binding</code>. Maps to: <em>DHCP server verification</em>.</p>
+<hr />
+<h2>CCNA Exam Topics Demonstrated</h2>
+<table>
+<thead>
+<tr>
+<th>CCNA Topic</th>
+<th>How You Applied It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1 Network Components</td>
+<td>Identified roles of router, switches, APs, DNS server in the failure</td>
+</tr>
+<tr>
+<td>1.5 TCP vs UDP</td>
+<td>Understood NAT translation showing UDP:443 (QUIC) vs typical TCP:443</td>
+</tr>
+<tr>
+<td>1.6 IPv4 Addressing and Subnetting</td>
+<td>Worked within VLAN subnets, verified correct gateway and DNS on static configs</td>
+</tr>
+<tr>
+<td>2.4 Configure and Verify Trunking</td>
+<td>Verified trunk allowed VLAN lists weren't corrupted by the <code>add</code> keyword lesson</td>
+</tr>
+<tr>
+<td>2.6 Layer 2/Layer 3 Port Types</td>
+<td>Distinguished between access ports (Apple TVs) and trunk ports (switch uplinks)</td>
+</tr>
+<tr>
+<td>3.3 Default Gateway</td>
+<td>Verified Apple TV gateway was 192.168.20.1 (Cisco SVI), not old 10.0.0.1 (XB8)</td>
+</tr>
+<tr>
+<td>3.4 NAT</td>
+<td>Verified NAT translations, confirmed inside-to-outside path working</td>
+</tr>
+<tr>
+<td>4.3 Configure and Verify DHCP</td>
+<td>Moved from static to DHCP, verified bindings, understood DHCP options</td>
+</tr>
+<tr>
+<td>4.5 TFTP/FTP/DNS</td>
+<td>Used nslookup to verify DNS resolution through Pi-hole</td>
+</tr>
+<tr>
+<td>5.3 IP Connectivity Troubleshooting</td>
+<td>Systematic Layer 1→7 approach: ping, NAT, MTU, DNS, application</td>
+</tr>
+<tr>
+<td>5.5 Network Security Concepts</td>
+<td>Understood Pi-hole DNS filtering as a security layer, whitelist management</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Troubleshooting Methodology Used</h2>
+<p>You followed the <strong>bottom-up troubleshooting approach</strong> without being told to:</p>
+<ol>
+<li><strong>Layer 1 (Physical):</strong> Cables verified, link lights confirmed</li>
+<li><strong>Layer 2 (Data Link):</strong> MAC addresses appearing in correct VLANs on correct ports</li>
+<li><strong>Layer 3 (Network):</strong> Ping successful, IP addresses correct, gateway verified</li>
+<li><strong>Layer 4 (Transport):</strong> NAT translations present, TCP MSS clamped for WAN path</li>
+<li><strong>Layer 7 (Application):</strong> DNS filtering identified as blocker, Apple domains whitelisted</li>
+<li><strong>DHCP vs Static:</strong> Final root cause — Apple TV required DHCP parameters beyond basic IP/gateway/DNS</li>
+</ol>
+<p>This is the exact methodology the CCNA exam tests and that network engineers use in production environments.</p>
+<hr />
+<h2>Key Lessons Learned</h2>
+<ol>
+<li>
+<p><strong>Ping success ≠ application success.</strong> A device can be fully reachable at Layer 3 and still fail at Layer 7 due to DNS filtering, application-layer requirements, or missing DHCP options.</p>
+</li>
+<li>
+<p><strong>DNS filtering affects more than ads.</strong> Pi-hole's blocklists include Apple service domains that streaming devices depend on. Always check the query log when devices can ping but apps won't load.</p>
+</li>
+<li>
+<p><strong>Static IPs aren't always better than DHCP.</strong> Apple TV devices specifically require DHCP-provided parameters to function correctly. Static IP configuration, while technically valid, caused application failures.</p>
+</li>
+<li>
+<p><strong>Bridge mode changes the WAN path.</strong> Switching from double-NAT to bridge mode changes the TCP MSS requirements. The <code>ip tcp adjust-mss 1452</code> command on the WAN interface prevents silent packet drops.</p>
+</li>
+<li>
+<p><strong>Always compare working vs non-working devices.</strong> When phones and laptops on the same VLAN worked but Apple TVs didn't, the difference (static vs DHCP) pointed directly to the root cause.</p>
+</li>
+<li>
+<p><strong>Use <code>switchport trunk allowed vlan add X</code></strong> — never <code>switchport trunk allowed vlan X</code>. The <code>add</code> keyword appends to the existing list. Without it, you overwrite and potentially lose all other VLANs from the trunk.</p>
+</li>
+</ol>
+<hr />
+<p><em>This troubleshooting session covered 11 CCNA exam topics across 4 OSI layers in a single real-world incident. This is the kind of experience that separates candidates who studied from candidates who built.</em></p>
+    </div>
+  </div>
+  <footer>&copy; 2026 Julius L Moore &middot; Built with purpose.</footer>
+  <script>
+    function toggleTheme() {
+      const h = document.documentElement, b = document.getElementById('themeBtn');
+      if (h.getAttribute('data-theme') === 'dark') {
+        h.setAttribute('data-theme','light'); b.textContent='\u25D0'; localStorage.setItem('theme','light');
+      } else {
+        h.setAttribute('data-theme','dark'); b.textContent='\u25D1'; localStorage.setItem('theme','dark');
+      }
+    }
+    (function(){
+      const s = localStorage.getItem('theme');
+      if (s==='light') { document.documentElement.setAttribute('data-theme','light'); document.getElementById('themeBtn').textContent='\u25D0'; }
+    })();
+  </script>
+</body>
+</html>
