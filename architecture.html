@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — Production AI Content Platform · Built With Purpose</title>
+  <meta name="description" content="System architecture for a 78K-line production AI content platform on self-hosted home lab infrastructure — WGU Software Engineering Capstone.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ===== THEME VARIABLES ===== */
+    [data-theme="dark"] {
+      --bg-primary: #08080a;
+      --bg-secondary: #0f0f12;
+      --bg-card: #141418;
+      --bg-nav: rgba(8, 8, 10, 0.88);
+      --border: #222228;
+      --border-hover: #3a3a44;
+      --text-primary: #ededef;
+      --text-secondary: #9d9ba8;
+      --text-muted: #5e5c6a;
+      --accent-blue: #6190f0;
+      --accent-green: #4ade80;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f472b6;
+      --accent-cyan: #22d3ee;
+      --tag-bg: rgba(97, 144, 240, 0.08);
+      --tag-border: rgba(97, 144, 240, 0.18);
+      --toggle-bg: #1e1e24;
+    }
+    [data-theme="light"] {
+      --bg-primary: #f7f7f8;
+      --bg-secondary: #efeff2;
+      --bg-card: #ffffff;
+      --bg-nav: rgba(247, 247, 248, 0.88);
+      --border: #d8d8de;
+      --border-hover: #b0b0ba;
+      --text-primary: #111118;
+      --text-secondary: #4a4858;
+      --text-muted: #84829a;
+      --accent-blue: #3464d4;
+      --accent-green: #16a34a;
+      --accent-amber: #d97706;
+      --accent-rose: #db2777;
+      --accent-cyan: #0891b2;
+      --tag-bg: rgba(52, 100, 212, 0.06);
+      --tag-border: rgba(52, 100, 212, 0.15);
+      --toggle-bg: #e4e4ea;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.35s, color 0.35s;
+    }
+
+    a { color: var(--accent-blue); text-decoration: none; transition: color 0.2s; }
+    a:hover { color: var(--accent-cyan); }
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: var(--bg-nav);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      transition: background 0.35s, border-color 0.35s;
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center; height: 60px;
+    }
+    .logo { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--text-secondary); }
+    .logo span { color: var(--accent-blue); }
+    .nav-right { display: flex; align-items: center; gap: 2rem; }
+    .nav-links { display: flex; gap: 1.75rem; list-style: none; }
+    .nav-links a { color: var(--text-secondary); font-size: 0.88rem; font-weight: 400; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--toggle-bg); cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; transition: all 0.3s; color: var(--text-secondary);
+    }
+    .theme-toggle:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+    /* ===== SECTIONS ===== */
+    section { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+    .section-label {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: var(--accent-blue); letter-spacing: 0.2em; text-transform: uppercase;
+      margin-bottom: 1.75rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ===== ARCH HERO ===== */
+    .arch-hero {
+      padding-top: 9rem; padding-bottom: 4rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4rem;
+    }
+    .arch-hero .hl {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: var(--accent-blue); letter-spacing: 0.2em; text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+    .arch-hero h1 {
+      font-size: clamp(1.8rem, 4.5vw, 2.6rem); font-weight: 800; line-height: 1.15;
+      letter-spacing: -0.02em; margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .arch-hero p.lede {
+      font-size: 1.05rem; color: var(--text-secondary); font-weight: 300;
+      max-width: 780px; line-height: 1.7; margin-bottom: 1.5rem;
+    }
+    .meta-row { display: flex; gap: 1.75rem; flex-wrap: wrap; }
+    .meta-item { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }
+    .meta-item b { color: var(--accent-blue); font-weight: 400; margin-right: 0.35rem; }
+
+    .arch-section { padding-bottom: 4rem; }
+
+    /* ===== STAT CARD ===== */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1.35rem; text-align: center; transition: border-color 0.3s, background 0.35s;
+    }
+    .stat-card:hover { border-color: var(--border-hover); }
+    .stat-number {
+      font-size: 1.8rem; font-weight: 700; font-family: 'DM Mono', monospace;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label {
+      font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted); margin-top: 0.35rem;
+    }
+
+    /* ===== DIAGRAM (layered stack) ===== */
+    .diagram {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 2rem 1.5rem; position: relative; overflow: hidden;
+      transition: background 0.35s, border-color 0.35s;
+    }
+    .diagram::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-rose), var(--accent-amber));
+    }
+    .layer { margin-bottom: 1.5rem; }
+    .layer:last-child { margin-bottom: 0; }
+    .layer-label {
+      font-family: 'DM Mono', monospace; font-size: 0.66rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; padding-left: 0.25rem;
+    }
+    .layer-row { display: flex; gap: 0.85rem; flex-wrap: wrap; }
+    .node {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.9rem 1rem; min-width: 170px; flex: 1;
+      transition: border-color 0.3s, transform 0.2s, background 0.35s;
+    }
+    .node:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+    .node-icon {
+      width: 30px; height: 30px; border-radius: 6px; display: flex;
+      align-items: center; justify-content: center; font-size: 0.95rem; margin-bottom: 0.5rem;
+    }
+    .ni-blue { background: rgba(97,144,240,0.12); }
+    .ni-green { background: rgba(74,222,128,0.12); }
+    .ni-amber { background: rgba(245,158,11,0.12); }
+    .ni-rose { background: rgba(244,114,182,0.12); }
+    .ni-cyan { background: rgba(34,211,238,0.12); }
+    .node-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; }
+    .node-desc {
+      font-family: 'DM Mono', monospace; font-size: 0.66rem; color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .node-tag {
+      display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 0.15rem 0.5rem;
+      border-radius: 3px; margin-top: 0.55rem;
+      background: var(--tag-bg); color: var(--accent-blue); border: 1px solid var(--tag-border);
+    }
+    .nt-green { background: rgba(74,222,128,0.08); color: var(--accent-green); border-color: rgba(74,222,128,0.2); }
+    .nt-amber { background: rgba(245,158,11,0.08); color: var(--accent-amber); border-color: rgba(245,158,11,0.2); }
+    .nt-rose  { background: rgba(244,114,182,0.08); color: var(--accent-rose);  border-color: rgba(244,114,182,0.2); }
+    .node.highlight { border-color: var(--accent-green); }
+
+    .connector {
+      display: flex; justify-content: center; padding: 0.35rem 0;
+    }
+    .connector-inner {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .connector-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border); }
+    .connector-line { width: 2px; height: 8px; background: var(--border); }
+    .connector-label {
+      font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-muted);
+      padding: 0.15rem 0.7rem; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: 20px; margin: 2px 0;
+    }
+
+    /* ===== REPO CARD ===== */
+    .repo-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1.75rem; margin-bottom: 1rem; position: relative; overflow: hidden;
+      transition: border-color 0.3s, background 0.35s;
+    }
+    .repo-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .repo-card.r1::before { background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan)); }
+    .repo-card.r2::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-rose)); }
+    .repo-card.r3::before { background: linear-gradient(90deg, var(--accent-amber), var(--accent-rose)); }
+    .repo-card:hover { border-color: var(--border-hover); }
+    .repo-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.85rem;
+    }
+    .repo-name { font-size: 1.15rem; font-weight: 700; }
+    .repo-path { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .repo-stats { display: flex; gap: 0.9rem; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }
+    .repo-stats strong { color: var(--text-primary); font-weight: 500; }
+    .repo-desc { font-size: 0.88rem; color: var(--text-secondary); font-weight: 300; line-height: 1.7; margin-bottom: 1rem; }
+    .repo-mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.55rem; }
+    .mod {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.65rem 0.75rem; transition: background 0.35s, border-color 0.35s;
+    }
+    .mod-name { font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 600; margin-bottom: 0.2rem; color: var(--accent-blue); }
+    .mod-desc { font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ===== FLOW ROWS ===== */
+    .flow-row {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+      margin-bottom: 0.85rem;
+    }
+    .flow-row:last-child { margin-bottom: 0; }
+    .flow-label {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em;
+      text-transform: uppercase; min-width: 110px;
+    }
+    .flow-step {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      padding: 0.4rem 0.7rem; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-secondary);
+      white-space: nowrap; transition: background 0.35s, border-color 0.35s;
+    }
+    .flow-arrow { color: var(--text-muted); font-size: 0.85rem; }
+
+    /* ===== TWO-UP ===== */
+    .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .engine-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1.5rem; position: relative; overflow: hidden;
+      transition: background 0.35s, border-color 0.35s;
+    }
+    .engine-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+    }
+    .engine-card.sidecar::before {
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-amber));
+    }
+    .engine-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.85rem; }
+    .engine-card .body { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.8; font-weight: 300; }
+    .engine-card .body b { color: var(--text-primary); font-weight: 500; }
+
+    /* ===== GENERIC GRID CARD ===== */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+    .info-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1.25rem; transition: border-color 0.3s, background 0.35s;
+    }
+    .info-card:hover { border-color: var(--accent-blue); }
+    .info-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .info-card p { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6; font-weight: 300; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.7rem; }
+    .pill {
+      font-family: 'DM Mono', monospace; font-size: 0.62rem;
+      padding: 0.2rem 0.5rem; border-radius: 4px;
+      background: var(--tag-bg); color: var(--accent-blue);
+      border: 1px solid var(--tag-border);
+    }
+
+    /* ===== TABLE ===== */
+    .hw-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); }
+    .hw {
+      width: 100%; border-collapse: collapse;
+    }
+    .hw th {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 0.85rem 1rem; text-align: left;
+      background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+    }
+    .hw td {
+      padding: 0.85rem 1rem; font-size: 0.85rem; color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+    }
+    .hw tr:last-child td { border-bottom: none; }
+    .hw .mono { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+      background: var(--accent-green); margin-right: 0.4rem; vertical-align: middle;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ===== FOOTER ===== */
+    footer { border-top: 1px solid var(--border); padding: 2.5rem 2rem; margin-top: 2rem; transition: border-color 0.35s; }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto; display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .footer-text { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-links a { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .two-up { grid-template-columns: 1fr; }
+      .layer-row { flex-direction: column; }
+      .flow-label { min-width: auto; }
+    }
+    @media (max-width: 480px) {
+      .nav-links { display: none; }
+      .arch-hero { padding-top: 7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="logo" style="color:var(--text-secondary)"><span>~/</span>builtwithpurpose</a>
+      <div class="nav-right">
+        <ul class="nav-links">
+          <li><a href="index.html#about">About</a></li>
+          <li><a href="index.html#network">Network</a></li>
+          <li><a href="index.html#labs">Labs</a></li>
+          <li><a href="index.html#projects">Projects</a></li>
+        </ul>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" id="themeBtn">◑</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="arch-hero">
+    <div class="hl">WGU Software Engineering — Capstone Portfolio</div>
+    <h1>Production AI Content Platform on Self-Hosted Infrastructure</h1>
+    <p class="lede">A 78,000+ line production system spanning 3 repositories, 3 Facebook pages, and 546+ weekly automated posts — self-hosted on home lab hardware with cloud orchestration on Railway and secure tunnel ingress via Ngrok.</p>
+    <div class="meta-row">
+      <div class="meta-item"><b>Author</b>Julius Moore</div>
+      <div class="meta-item"><b>Version</b>2.0</div>
+      <div class="meta-item"><b>Date</b>April 2026</div>
+      <div class="meta-item"><b>Codebase</b>78,295 lines</div>
+      <div class="meta-item"><b>Status</b><span class="status-dot"></span>Production 24/7</div>
+    </div>
+  </section>
+
+  <!-- 00 · GLANCE -->
+  <section class="arch-section">
+    <div class="section-label">00 — Platform at a Glance</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-number">78K+</div><div class="stat-label">Lines of Code</div></div>
+      <div class="stat-card"><div class="stat-number">3</div><div class="stat-label">Production Repos</div></div>
+      <div class="stat-card"><div class="stat-number">546</div><div class="stat-label">Posts / Week</div></div>
+      <div class="stat-card"><div class="stat-number">3</div><div class="stat-label">Facebook Pages</div></div>
+      <div class="stat-card"><div class="stat-number">8</div><div class="stat-label">External APIs</div></div>
+      <div class="stat-card"><div class="stat-number">24/7</div><div class="stat-label">Server Uptime</div></div>
+    </div>
+  </section>
+
+  <!-- 01 · SYSTEM ARCHITECTURE -->
+  <section class="arch-section">
+    <div class="section-label">01 — System Architecture</div>
+    <div class="diagram">
+
+      <div class="layer">
+        <div class="layer-label">External APIs &amp; Services</div>
+        <div class="layer-row">
+          <div class="node"><div class="node-icon ni-rose">📱</div><div class="node-name">Meta Graph API</div><div class="node-desc">Facebook Pages API<br>Webhooks (inbound)<br>Post / Comment / Reply</div><span class="node-tag nt-rose">Platform API</span></div>
+          <div class="node"><div class="node-icon ni-amber">🤖</div><div class="node-name">AI Services</div><div class="node-desc">Anthropic Claude<br>xAI Grok · OpenAI<br>Content + scoring</div><span class="node-tag nt-rose">AI Inference</span></div>
+          <div class="node"><div class="node-icon ni-cyan">🎨</div><div class="node-name">Media APIs</div><div class="node-desc">Kie.ai (images)<br>ElevenLabs (TTS)<br>Suno (music)</div><span class="node-tag nt-rose">Generation</span></div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-inner"><div class="connector-dot"></div><div class="connector-line"></div><div class="connector-label">HTTPS / Webhooks</div><div class="connector-line"></div><div class="connector-dot"></div></div></div>
+
+      <div class="layer">
+        <div class="layer-label">Cloud — Railway</div>
+        <div class="layer-row">
+          <div class="node" style="flex:2"><div class="node-icon ni-blue">🚂</div><div class="node-name">meta_engagement_pipeline</div><div class="node-desc">36K lines · Express + Worker + PM2<br>Postgres · Cron automation<br>Greetings · Engagement scoring<br>Self-healing · Content analysis</div><span class="node-tag">Railway PaaS</span></div>
+          <div class="node"><div class="node-icon ni-rose">⚙️</div><div class="node-name">PM2 Processes</div><div class="node-desc">mlx-poster<br>feed-engager<br>worker (crons)</div><span class="node-tag">Process Mgmt</span></div>
+          <div class="node"><div class="node-icon ni-green">📊</div><div class="node-name">Postgres</div><div class="node-desc">Users · Pages<br>ScheduledPosts<br>Interactions<br>FollowerGrowth</div><span class="node-tag">Database</span></div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-inner"><div class="connector-dot"></div><div class="connector-line"></div><div class="connector-label">Ngrok Tunnel (SSE + HTTPS)</div><div class="connector-line"></div><div class="connector-dot"></div></div></div>
+
+      <div class="layer">
+        <div class="layer-label">ISP Gateway</div>
+        <div class="layer-row">
+          <div class="node" style="flex:2"><div class="node-icon ni-blue">📡</div><div class="node-name">Xfinity xFi Gateway</div><div class="node-desc">Modem + Router + WiFi · WAN: Coax<br>No port forwarding — Ngrok only</div><span class="node-tag nt-amber">Gateway</span></div>
+          <div class="node"><div class="node-icon ni-green">🏠</div><div class="node-name">Somfy Hub</div><div class="node-desc">Smart blinds<br>WiFi</div><span class="node-tag nt-amber">IoT</span></div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-inner"><div class="connector-dot"></div><div class="connector-line"></div><div class="connector-label">Ethernet → Patch Panel → Switch</div><div class="connector-line"></div><div class="connector-dot"></div></div></div>
+
+      <div class="layer">
+        <div class="layer-label">Switching &amp; Distribution</div>
+        <div class="layer-row">
+          <div class="node"><div class="node-icon ni-amber">⬛</div><div class="node-name">Structured Wiring Panel</div><div class="node-desc">8-port keystone patch panel<br>Coax splitter · Utility closet</div><span class="node-tag nt-amber">Distribution</span></div>
+          <div class="node"><div class="node-icon ni-blue">🔵</div><div class="node-name">TP-Link TL-SG108</div><div class="node-desc">8-Port Gigabit Unmanaged<br>→ Upgrading to GS308EP</div><span class="node-tag nt-amber">Switch</span></div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-inner"><div class="connector-dot"></div><div class="connector-line"></div><div class="connector-label">5+ Active Drops → Rooms</div><div class="connector-line"></div><div class="connector-dot"></div></div></div>
+
+      <div class="layer">
+        <div class="layer-label">Home Server — Acer Aspire 3 15 (24/7)</div>
+        <div class="layer-row">
+          <div class="node highlight" style="flex:2"><div class="node-icon ni-green">🖥️</div><div class="node-name">social-media-mcp</div><div class="node-desc">19,753 lines · TypeScript · MCP Protocol<br>Express SSE on :3000 · 22 lib modules<br>Kie, Suno, ElevenLabs, Remotion, FFmpeg<br>Puppeteer FB automation · 20+ video templates</div><span class="node-tag nt-green">● Always On</span></div>
+          <div class="node highlight"><div class="node-icon ni-amber">📂</div><div class="node-name">fb-content-system</div><div class="node-desc">22,067 lines · JS/TS/Python<br>182 posts/wk × 3 pages<br>Claude copy · Playwright render<br>Remotion reels · Graph API post</div><span class="node-tag nt-green">● Production</span></div>
+          <div class="node"><div class="node-icon ni-rose">🔗</div><div class="node-name">Ngrok Agent</div><div class="node-desc">Tunnel to cloud<br>Public HTTPS<br>SSE transport</div><span class="node-tag">Tunnel</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 02 · REPOSITORY ARCHITECTURE -->
+  <section class="arch-section">
+    <div class="section-label">02 — Repository Architecture</div>
+
+    <div class="repo-card r1">
+      <div class="repo-head">
+        <div>
+          <div class="repo-name">social-media-mcp</div>
+          <div class="repo-path">github.com/design1-software/social-media-mcp</div>
+        </div>
+        <div class="repo-stats"><span><strong>19,753</strong> lines</span>·<span><strong>TypeScript</strong></span>·<span><strong>Self-hosted</strong></span></div>
+      </div>
+      <div class="repo-desc">MCP server running 24/7 on the home server. Exposes AI content creation tools via Model Context Protocol over SSE. Bridges cloud orchestration to local compute and browser automation. Integrates 8 external APIs into a unified tool interface.</div>
+      <div class="repo-mods">
+        <div class="mod"><div class="mod-name">src/lib/kie.ts</div><div class="mod-desc">Kie.ai image generation</div></div>
+        <div class="mod"><div class="mod-name">src/lib/elevenlabs.ts</div><div class="mod-desc">Text-to-speech voiceover</div></div>
+        <div class="mod"><div class="mod-name">src/lib/suno.ts</div><div class="mod-desc">AI music for reels</div></div>
+        <div class="mod"><div class="mod-name">src/lib/remotion.ts</div><div class="mod-desc">Video rendering (20+ templates)</div></div>
+        <div class="mod"><div class="mod-name">src/lib/facebook.ts</div><div class="mod-desc">Puppeteer browser automation</div></div>
+        <div class="mod"><div class="mod-name">src/lib/ffmpeg.ts</div><div class="mod-desc">Media stitching &amp; processing</div></div>
+        <div class="mod"><div class="mod-name">src/lib/grok.ts</div><div class="mod-desc">xAI Grok content + vision</div></div>
+        <div class="mod"><div class="mod-name">src/lib/storyArc.ts</div><div class="mod-desc">Multi-part story generation</div></div>
+        <div class="mod"><div class="mod-name">src/lib/commentBait.ts</div><div class="mod-desc">Engagement-optimized posts</div></div>
+        <div class="mod"><div class="mod-name">src/lib/identity.ts</div><div class="mod-desc">Brand profile management</div></div>
+        <div class="mod"><div class="mod-name">src/lib/perplexity.ts</div><div class="mod-desc">Web research &amp; trend ID</div></div>
+        <div class="mod"><div class="mod-name">remotion/ (20+ files)</div><div class="mod-desc">PlaybookPromo, ViralShort, Quote, Comic, Lesson</div></div>
+      </div>
+    </div>
+
+    <div class="repo-card r2">
+      <div class="repo-head">
+        <div>
+          <div class="repo-name">meta_engagement_pipeline</div>
+          <div class="repo-path">github.com/design1-software/meta_engagement_pipeline</div>
+        </div>
+        <div class="repo-stats"><span><strong>36,475</strong> lines</span>·<span><strong>JavaScript</strong></span>·<span><strong>Railway</strong></span></div>
+      </div>
+      <div class="repo-desc">Cloud-hosted engagement orchestrator with dual-engine architecture: Graph API engine for official page actions, Sidecar engine bridging back to home server MCP for browser-automated profile actions. Manages 3 Facebook pages with automated greetings, strategic content drafts, follower tracking, quality scoring, and self-healing recovery.</div>
+      <div class="repo-mods">
+        <div class="mod"><div class="mod-name">server.js</div><div class="mod-desc">Express API: webhooks, inbox, pages, viral, auth</div></div>
+        <div class="mod"><div class="mod-name">worker.js</div><div class="mod-desc">Cron engine: greetings 2×/day, drafts 5×/day</div></div>
+        <div class="mod"><div class="mod-name">lib/publisher.js</div><div class="mod-desc">Graph API posting w/ error recovery</div></div>
+        <div class="mod"><div class="mod-name">lib/mcpClient.js</div><div class="mod-desc">MCP client → home server via Ngrok</div></div>
+        <div class="mod"><div class="mod-name">lib/greetingService.js</div><div class="mod-desc">Zero-touch AM/PM greeting automation</div></div>
+        <div class="mod"><div class="mod-name">lib/viralContentService.js</div><div class="mod-desc">Viral content pipeline + media gen</div></div>
+        <div class="mod"><div class="mod-name">lib/contentAnalyzer.js</div><div class="mod-desc">LLM-based quality scoring</div></div>
+        <div class="mod"><div class="mod-name">lib/selfHealingService.js</div><div class="mod-desc">Auto-recovery from failures</div></div>
+        <div class="mod"><div class="mod-name">lib/cohortManager.js</div><div class="mod-desc">Cross-page engagement</div></div>
+        <div class="mod"><div class="mod-name">facebookAutomator.js</div><div class="mod-desc">Browser automation via Sidecar</div></div>
+        <div class="mod"><div class="mod-name">models/ (10+ models)</div><div class="mod-desc">Sequelize ORM → Postgres</div></div>
+        <div class="mod"><div class="mod-name">routes/ (12 files)</div><div class="mod-desc">webhooks, viral, inbox, lab, narrative</div></div>
+      </div>
+    </div>
+
+    <div class="repo-card r3">
+      <div class="repo-head">
+        <div>
+          <div class="repo-name">fb-content-system</div>
+          <div class="repo-path">github.com/design1-software/fb-content-system</div>
+        </div>
+        <div class="repo-stats"><span><strong>22,067</strong> lines</span>·<span><strong>JS/TS/Python</strong></span>·<span><strong>Local</strong></span></div>
+      </div>
+      <div class="repo-desc">Content factory producing 182 posts/week per page across 3 Facebook pages (MEA, Runnin From A2B, After The Uniform). Full 6-phase pipeline: page discovery → visual system → content production → posting → reels → engagement loop. 10 content pillars per page with branded HTML templates rendered to PNG via Playwright and video reels via Remotion.</div>
+      <div class="repo-mods">
+        <div class="mod"><div class="mod-name">tools/generate_copy.js</div><div class="mod-desc">Claude API — voice-calibrated copy per post</div></div>
+        <div class="mod"><div class="mod-name">tools/fb_poster.js</div><div class="mod-desc">Graph API posting w/ SQLite ledger</div></div>
+        <div class="mod"><div class="mod-name">tools/render.py</div><div class="mod-desc">Playwright HTML→PNG 1080×1080</div></div>
+        <div class="mod"><div class="mod-name">tools/engagement_tracker.js</div><div class="mod-desc">Pull engagement, score per pillar</div></div>
+        <div class="mod"><div class="mod-name">tools/content_recycler.js</div><div class="mod-desc">Recycle top performers w/ variation</div></div>
+        <div class="mod"><div class="mod-name">tools/optimize_mix.js</div><div class="mod-desc">Adjust pillar mix from perf data</div></div>
+        <div class="mod"><div class="mod-name">reels/ (Remotion)</div><div class="mod-desc">FactReveal, QuoteZoom, StepSequence, DataBars</div></div>
+        <div class="mod"><div class="mod-name">templates/ (3 dirs)</div><div class="mod-desc">Branded HTML per pillar per page</div></div>
+        <div class="mod"><div class="mod-name">mea/ a2b/ atu/</div><div class="mod-desc">Brand identity, topic banks, performance</div></div>
+        <div class="mod"><div class="mod-name">tools/auto_reply.js</div><div class="mod-desc">Automated comment replies</div></div>
+        <div class="mod"><div class="mod-name">tools/cross_engage.js</div><div class="mod-desc">Cross-page engagement automation</div></div>
+        <div class="mod"><div class="mod-name">skills/ (6 phases)</div><div class="mod-desc">Discovery → Visual → Prod → Post → Reel → Recycle</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 · DATA FLOW -->
+  <section class="arch-section">
+    <div class="section-label">03 — Data Flow · Content Lifecycle</div>
+    <div class="diagram" style="padding:1.5rem">
+      <div class="flow-row">
+        <div class="flow-label" style="color:var(--accent-amber)">1. Generate</div>
+        <div class="flow-step" style="border-color:var(--accent-amber)">fb-content-system</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">Topic Banks</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-amber)">Claude API</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">generated_copy.json</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label" style="color:var(--accent-rose)">2. Render</div>
+        <div class="flow-step">HTML Templates</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-rose)">Playwright (PNG)</div>
+        <span class="flow-arrow">+</span>
+        <div class="flow-step" style="border-color:var(--accent-rose)">Remotion (MP4)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">182 assets/wk/page</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label" style="color:var(--accent-green)">3. Publish</div>
+        <div class="flow-step" style="border-color:var(--accent-green)">fb_poster.js</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-rose)">Meta Graph API</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">3 Facebook Pages</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label" style="color:var(--accent-blue)">4. Orchestrate</div>
+        <div class="flow-step" style="border-color:var(--accent-blue)">Railway Worker</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">Webhooks</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-blue)">Sidecar (MCP)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-green)">Home Server</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label" style="color:var(--accent-cyan)">5. Optimize</div>
+        <div class="flow-step" style="border-color:var(--accent-cyan)">engagement_tracker</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">performance.json</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent-cyan)">optimize_mix</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">content_recycler</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · DUAL ENGINE -->
+  <section class="arch-section">
+    <div class="section-label">04 — Dual-Engine Architecture (MEA)</div>
+    <div class="two-up">
+      <div class="engine-card">
+        <h3>⚡ Graph API Engine (Cloud)</h3>
+        <div class="body">
+          <b>Scope:</b> MEA + A2B page timeline posts, comment replies, webhook ingestion<br>
+          <b>Runs on:</b> Railway<br>
+          <b>Limits:</b> Cannot post to personal profiles or engage on newsfeeds
+        </div>
+      </div>
+      <div class="engine-card sidecar">
+        <h3>🤖 Sidecar Engine (Home Server)</h3>
+        <div class="body">
+          <b>Scope:</b> Profile posts, greetings, newsfeed scouting, follower checks<br>
+          <b>Runs on:</b> Home server via MCP bridge<br>
+          <b>Method:</b> Puppeteer automating local Chrome instance
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · PAGES -->
+  <section class="arch-section">
+    <div class="section-label">05 — Pages Under Management</div>
+    <div class="grid">
+      <div class="info-card">
+        <h3>📱 MEA</h3>
+        <p>Software company. Social media automation education for creators. Algorithm intel, playbooks, real talk.</p>
+        <div class="pill-row"><span class="pill">Algorithm Intel</span><span class="pill">Creator Playbook</span><span class="pill">Real Talk</span><span class="pill">182/wk</span></div>
+      </div>
+      <div class="info-card">
+        <h3>🏃 Runnin From A2B</h3>
+        <p>Running and fitness community. Training tips, race prep, community engagement.</p>
+        <div class="pill-row"><span class="pill">Fitness</span><span class="pill">Community</span><span class="pill">182/wk</span></div>
+      </div>
+      <div class="info-card">
+        <h3>🎖️ After The Uniform</h3>
+        <p>Veteran transition content. Military-to-civilian community support and resources.</p>
+        <div class="pill-row"><span class="pill">Veterans</span><span class="pill">Transition</span><span class="pill">182/wk</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · HARDWARE -->
+  <section class="arch-section">
+    <div class="section-label">06 — Hardware Inventory</div>
+    <div class="hw-wrap">
+      <table class="hw">
+        <thead><tr><th>Device</th><th>Model</th><th>Role</th><th>Connection</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>ISP Gateway</td><td class="mono">Xfinity xFi Gateway</td><td>Modem + Router + WiFi</td><td class="mono">WAN: Coax</td><td><span class="status-dot"></span>Active</td></tr>
+          <tr><td>Switch</td><td class="mono">TP-Link TL-SG108</td><td>8-port Gigabit distribution</td><td class="mono">Ethernet ← Gateway</td><td><span class="status-dot"></span>Active</td></tr>
+          <tr><td>Home Server</td><td class="mono">Acer Aspire 3 15 (Ryzen)</td><td>MCP Server + Content (24/7)</td><td class="mono">Ethernet via wall jack</td><td><span class="status-dot"></span>Running</td></tr>
+          <tr><td>Display</td><td class="mono">Dell Monitor</td><td>Server management</td><td class="mono">HDMI</td><td><span class="status-dot"></span>Active</td></tr>
+          <tr><td>Smart Home</td><td class="mono">Somfy Hub</td><td>Blind/shade automation</td><td class="mono">WiFi</td><td><span class="status-dot"></span>Active</td></tr>
+          <tr><td>Wiring Panel</td><td class="mono">Structured Media Enclosure</td><td>Patch panel + coax</td><td class="mono">Cat5e/6</td><td><span class="status-dot"></span>Active</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 07 · TECH STACK -->
+  <section class="arch-section">
+    <div class="section-label">07 — Technology Stack</div>
+    <div class="grid">
+      <div class="info-card"><h3>Languages</h3><div class="pill-row"><span class="pill">TypeScript</span><span class="pill">JavaScript</span><span class="pill">Python</span><span class="pill">HTML/CSS</span><span class="pill">SQL</span></div></div>
+      <div class="info-card"><h3>Frameworks</h3><div class="pill-row"><span class="pill">Node.js</span><span class="pill">Express</span><span class="pill">Remotion</span><span class="pill">React</span><span class="pill">Playwright</span><span class="pill">Puppeteer</span></div></div>
+      <div class="info-card"><h3>Protocols</h3><div class="pill-row"><span class="pill">MCP (SSE)</span><span class="pill">Meta Graph API</span><span class="pill">REST</span><span class="pill">Webhooks</span><span class="pill">OAuth 2.0</span></div></div>
+      <div class="info-card"><h3>AI Services</h3><div class="pill-row"><span class="pill">Claude</span><span class="pill">Grok</span><span class="pill">OpenAI</span><span class="pill">ElevenLabs</span><span class="pill">Kie.ai</span><span class="pill">Suno</span></div></div>
+      <div class="info-card"><h3>Data</h3><div class="pill-row"><span class="pill">PostgreSQL</span><span class="pill">SQLite</span><span class="pill">Sequelize</span><span class="pill">JSON stores</span></div></div>
+      <div class="info-card"><h3>Infrastructure</h3><div class="pill-row"><span class="pill">Railway</span><span class="pill">Ngrok</span><span class="pill">PM2</span><span class="pill">FFmpeg</span><span class="pill">Docker (planned)</span></div></div>
+    </div>
+  </section>
+
+  <!-- 08 · SECURITY -->
+  <section class="arch-section">
+    <div class="section-label">08 — Security Posture</div>
+    <div class="grid">
+      <div class="info-card"><h3>🔒 Zero Port Forwarding</h3><p>No ports open on gateway. All ingress via Ngrok encrypted tunnel only.</p></div>
+      <div class="info-card"><h3>🔑 MCP Auth Tokens</h3><p>All Sidecar callbacks secured via x-mcp-token / x-internal-key verification.</p></div>
+      <div class="info-card"><h3>🔐 Credential Mgmt</h3><p>Env vars in .env (gitignored). Railway encrypted store. Sequelize field encryption.</p></div>
+      <div class="info-card"><h3>🛡️ Self-Healing</h3><p>Auto-recovery from failures. Health checks, stuck-post cleanup, email alerts.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-text">© 2026 Julius L Moore · Built with purpose.</div>
+      <div class="footer-links">
+        <a href="https://github.com/design1-software" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/julius-moore" target="_blank">LinkedIn</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const btn = document.getElementById('themeBtn');
+      if (html.getAttribute('data-theme') === 'dark') {
+        html.setAttribute('data-theme', 'light');
+        btn.textContent = '◐';
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        btn.textContent = '◑';
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.getElementById('themeBtn').textContent = '◐';
+      }
+    })();
+  </script>
+
+</body>
+</html>
