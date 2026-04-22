@@ -3,3 +3,8 @@
 
 # Netlify CLI
 .netlify/
+
+# Remotion build project — kept local, not deployed
+_remotion/node_modules/
+_remotion/out/
+_remotion/.cache/
